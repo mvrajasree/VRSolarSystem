@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>VR 3D Solar System</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #000; }
+        #infoBox {
+            position: absolute;
+            top: 20px; left: 20px;
+            background: rgba(0,0,0,0.7);
+            color: #fff;
+            padding: 16px;
+            border-radius: 8px;
+            display: none;
+            z-index: 10;
+            max-width: 300px;
+        }
+    </style>
+</head>
+<body>
+    <div id="infoBox"></div>
+    <script type="module">
+import * as THREE from 'https://unpkg.com/three@0.150.1/build/three.module.js?module';
+import { OrbitControls } from 'https://unpkg.com/three@0.150.1/examples/jsm/controls/OrbitControls.js?module';
+import { VRButton } from 'https://unpkg.com/three@0.150.1/examples/jsm/webxr/VRButton.js?module';
+
+        // Planet data with texture URLs and info
+        const planets = [
+            {
+                name: "Mercury",
+                size: 1.2,
+                distance: 13,
+                texture: "textures/mercury.jpg",
+                info: "Mercury is the closest planet to the Sun and the smallest in the Solar System.",
+                diameter: "4,880 km",
+                orbitalPeriod: "88 Earth days",
+                funFact: "A day on Mercury (sunrise to sunrise) is about 176 Earth days long!"
+            },
+            {
+                name: "Venus",
+                size: 2.2,
+                distance: 17,
+                texture: "textures/venus.jpg",
+                info: "Venus is the second planet from the Sun and has a thick, toxic atmosphere.",
+                diameter: "12,104 km",
+                orbitalPeriod: "225 Earth days",
+                funFact: "Venus rotates backwards compared to most planets!"
+            },
+            {
+                name: "Earth",
+                size: 2.4,
+                distance: 22,
+                texture: "textures/earth_atmos_2048.jpg",
+                info: "Earth is our home planet and the only one known to support life.",
+                diameter: "12,742 km",
+                orbitalPeriod: "365.25 days",
+                funFact: "Earth is the densest planet in the Solar System."
+            },
+            {
+                name: "Mars",
+                size: 1.8,
+                distance: 27,
+                texture: "textures/mars_1k_color.jpg",
+                info: "Mars is known as the Red Planet and is the fourth planet from the Sun.",
+                diameter: "6,779 km",
+                orbitalPeriod: "687 Earth days",
+                funFact: "Mars has the tallest volcano in the Solar System, Olympus Mons."
+            },
+            {
+                name: "Jupiter",
+                size: 6.4,
+                distance: 34,
+                texture: "textures/jupiter.jpg",
+                info: "Jupiter is the largest planet in the Solar System and is a gas giant.",
+                diameter: "139,820 km",
+                orbitalPeriod: "12 Earth years",
+                funFact: "Jupiter has a giant storm called the Great Red Spot."
+            },
+            {
+                name: "Saturn",
+                size: 5.6,
+                distance: 41,
+                texture: "textures/saturn.jpg",
+                info: "Saturn is famous for its beautiful rings.",
+                diameter: "116,460 km",
+                orbitalPeriod: "29.5 Earth years",
+                funFact: "Saturn could float in water because it’s mostly made of gas!"
+            },
+            {
+                name: "Uranus",
+                size: 3.6,
+                distance: 48,
+                texture: "textures/uranus.jpg",
+                info: "Uranus rotates on its side and has a blue-green color due to methane.",
+                diameter: "50,724 km",
+                orbitalPeriod: "84 Earth years",
+                funFact: "Uranus’s axis is tilted by 98 degrees!"
+            },
+            {
+                name: "Neptune",
+                size: 3.6,
+                distance: 55,
+                texture: "textures/neptune.jpg",
+                info: "Neptune is the farthest planet from the Sun and is known for its deep blue color.",
+                diameter: "49,244 km",
+                orbitalPeriod: "165 Earth years",
+                funFact: "Neptune has the fastest winds in the Solar System, up to 2,100 km/h!"
+            }
+        ];
+
+        // Scene setup
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x000000);
+
+        // Milky Way background
+        const milkyWayTexture = new THREE.TextureLoader().load('textures/milkyway.jpg'); // <-- use your actual filename
+        scene.background = milkyWayTexture;
+
+        // Camera
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 10, 40);
+
+        // Renderer
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.xr.enabled = true;
+        document.body.appendChild(renderer.domElement);
+
+        // VR Button
+        document.body.appendChild(VRButton.createButton(renderer));
+
+        // Controls (for desktop)
+        const controls = new OrbitControls(camera, renderer.domElement);
+
+        // Lighting
+        const sunLight = new THREE.PointLight(0xffffff, 2, 200);
+        sunLight.position.set(50, 50, 50); // Move the light away from the center
+        scene.add(sunLight);
+
+        // Sun
+        const sunTexture = new THREE.TextureLoader().load("textures/sun.jpg");
+        const sunMaterial = new THREE.MeshBasicMaterial({ map: sunTexture });
+        const sun = new THREE.Mesh(new THREE.SphereGeometry(10, 64, 64), sunMaterial);
+        sun.position.set(0, 0, 0);
+        scene.add(sun);
+
+        // Planet meshes
+        const planetMeshes = [];
+        planets.forEach((planet, i) => {
+            const texture = new THREE.TextureLoader().load(planet.texture);
+            const material = new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide });
+            const mesh = new THREE.Mesh(
+                new THREE.SphereGeometry(planet.size, 48, 48),
+                material
+            );
+            mesh.position.set(planet.distance, 0, 0);
+            mesh.userData = { index: i };
+            scene.add(mesh);
+            planetMeshes.push(mesh);
+
+            // Add Saturn's rings
+            if (planet.name === "Saturn") {
+                const ringTexture = new THREE.TextureLoader().load("textures/saturnring.png");
+                const ringGeometry = new THREE.RingGeometry(planet.size + 1.5, planet.size + 3.5, 128);
+                const ringMaterial = new THREE.MeshBasicMaterial({
+                    map: ringTexture,
+                    side: THREE.DoubleSide,
+                    transparent: true,
+                    opacity: 0.8
+                });
+                const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+                ring.rotation.x = Math.PI / 2;
+                ring.position.set(0, 0, 0); // Centered on Saturn
+                mesh.add(ring); // Attach ring to Saturn mesh
+            }
+        });
+
+        // Starfield background
+        {
+            const starGeometry = new THREE.BufferGeometry();
+            const starCount = 2000;
+            const positions = [];
+            for (let i = 0; i < starCount; i++) {
+                const r = 100 + Math.random() * 200;
+                const theta = Math.random() * 2 * Math.PI;
+                const phi = Math.acos(2 * Math.random() - 1);
+                positions.push(
+                    r * Math.sin(phi) * Math.cos(theta),
+                    r * Math.sin(phi) * Math.sin(theta),
+                    r * Math.cos(phi)
+                );
+            }
+            starGeometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+            const starMaterial = new THREE.PointsMaterial({ color: 0xffffff, size: 0.7 });
+            const stars = new THREE.Points(starGeometry, starMaterial);
+            scene.add(stars);
+        }
+
+        // Raycaster for interaction
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+        const infoBox = document.getElementById('infoBox');
+
+        function showInfo(index, position) {
+            const planet = planets[index];
+            infoBox.innerHTML = `
+                <strong>${planet.name}</strong><br>
+                ${planet.info}<br>
+                <b>Diameter:</b> ${planet.diameter}<br>
+                <b>Orbital Period:</b> ${planet.orbitalPeriod}<br>
+                <b>Fun Fact:</b> ${planet.funFact}
+            `;
+            infoBox.style.display = 'block';
+        }
+
+        function hideInfo() {
+            infoBox.style.display = 'none';
+        }
+
+        // Mouse/touch interaction
+        function onPointerDown(event) {
+            if (event.touches) {
+                mouse.x = (event.touches[0].clientX / window.innerWidth) * 2 - 1;
+                mouse.y = -(event.touches[0].clientY / window.innerHeight) * 2 + 1;
+            } else {
+                mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+                mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            }
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(planetMeshes);
+            if (intersects.length > 0) {
+                const index = intersects[0].object.userData.index;
+                showInfo(index, intersects[0].point);
+            } else {
+                hideInfo();
+            }
+        }
+        window.addEventListener('pointerdown', onPointerDown, false);
+        window.addEventListener('touchstart', onPointerDown, false);
+
+        // Store planet angles for revolution
+        const planetAngles = planets.map(() => Math.random() * Math.PI * 2); // randomize start
+
+        // Draw orbits (make more transparent)
+        planets.forEach((planet) => {
+            const orbitGeometry = new THREE.RingGeometry(planet.distance - 0.05, planet.distance + 0.05, 128);
+            const orbitMaterial = new THREE.MeshBasicMaterial({
+                color: 0x888888,
+                side: THREE.DoubleSide,
+                transparent: true,
+                opacity: 0.15 // more transparent
+            });
+            const orbit = new THREE.Mesh(orbitGeometry, orbitMaterial);
+            orbit.rotation.x = Math.PI / 2;
+            orbit.position.set(0, 0, 0);
+            scene.add(orbit);
+        });
+
+        // Responsive
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // Animation loop
+        renderer.setAnimationLoop(() => {
+            // Rotate planets around the sun
+            planetMeshes.forEach((mesh, i) => {
+                const planet = planets[i];
+                // Update angle for revolution (speed inversely proportional to distance)
+                planetAngles[i] += 0.001 / planet.distance;
+                mesh.position.x = Math.cos(planetAngles[i]) * planet.distance;
+                mesh.position.z = Math.sin(planetAngles[i]) * planet.distance;
+                mesh.rotation.y += 0.01;
+            });
+            sun.rotation.y += 0.002;
+            controls.update();
+            renderer.render(scene, camera);
+        });
+    </script>
+</body>
+</html>
