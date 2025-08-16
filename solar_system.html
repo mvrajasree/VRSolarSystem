@@ -21,9 +21,9 @@
 <body>
     <div id="infoBox"></div>
     <script type="module">
-import * as THREE from 'https://unpkg.com/three@0.150.1/build/three.module.js?module';
-import { OrbitControls } from 'https://unpkg.com/three@0.150.1/examples/jsm/controls/OrbitControls.js?module';
-import { VRButton } from 'https://unpkg.com/three@0.150.1/examples/jsm/webxr/VRButton.js?module';
+        import * as THREE from 'https://unpkg.com/three@0.150.1/build/three.module.js?module';
+        import { OrbitControls } from 'https://unpkg.com/three@0.150.1/examples/jsm/controls/OrbitControls.js?module';
+        import { VRButton } from 'https://unpkg.com/three@0.150.1/examples/jsm/webxr/VRButton.js?module';
 
         // Planet data with texture URLs and info
         const planets = [
@@ -80,7 +80,7 @@ import { VRButton } from 'https://unpkg.com/three@0.150.1/examples/jsm/webxr/VRB
             {
                 name: "Saturn",
                 size: 5.6,
-                distance: 41,
+                distance: 45,
                 texture: "textures/saturn.jpg",
                 info: "Saturn is famous for its beautiful rings.",
                 diameter: "116,460 km",
@@ -90,7 +90,7 @@ import { VRButton } from 'https://unpkg.com/three@0.150.1/examples/jsm/webxr/VRB
             {
                 name: "Uranus",
                 size: 3.6,
-                distance: 48,
+                distance: 50,
                 texture: "textures/uranus.jpg",
                 info: "Uranus rotates on its side and has a blue-green color due to methane.",
                 diameter: "50,724 km",
@@ -257,27 +257,30 @@ import { VRButton } from 'https://unpkg.com/three@0.150.1/examples/jsm/webxr/VRB
             scene.add(orbit);
         });
 
+        // Animation loop
+        function animate() {
+            // Update planet positions
+            planetMeshes.forEach((mesh, i) => {
+                // Calculate the angle of revolution based on time
+                planetAngles[i] += 0.005; // Adjust speed of revolution here
+                const planet = planets[i];
+                mesh.position.x = planet.distance * Math.cos(planetAngles[i]);
+                mesh.position.z = planet.distance * Math.sin(planetAngles[i]);
+            });
+
+            // Render the scene
+            renderer.render(scene, camera);
+            renderer.setAnimationLoop(animate); // For VR compatibility
+        }
+
+        // Start the animation loop
+        animate();
+
         // Responsive
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
-        });
-
-        // Animation loop
-        renderer.setAnimationLoop(() => {
-            // Rotate planets around the sun
-            planetMeshes.forEach((mesh, i) => {
-                const planet = planets[i];
-                // Update angle for revolution (speed inversely proportional to distance)
-                planetAngles[i] += 0.001 / planet.distance;
-                mesh.position.x = Math.cos(planetAngles[i]) * planet.distance;
-                mesh.position.z = Math.sin(planetAngles[i]) * planet.distance;
-                mesh.rotation.y += 0.01;
-            });
-            sun.rotation.y += 0.002;
-            controls.update();
-            renderer.render(scene, camera);
         });
     </script>
 </body>
