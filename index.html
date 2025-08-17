@@ -143,6 +143,7 @@
         const sunMaterial = new THREE.MeshBasicMaterial({ map: sunTexture });
         const sun = new THREE.Mesh(new THREE.SphereGeometry(10, 64, 64), sunMaterial);
         sun.position.set(0, 0, 0);
+        sun.userData = { index: -1 }; // Assign an index for the Sun
         scene.add(sun);
 
         // Planet meshes
@@ -203,7 +204,19 @@
         const infoBox = document.getElementById('infoBox');
 
         function showInfo(index, position) {
-            const planet = planets[index];
+            let planet;
+            if (index === -1) {
+                // Sun info
+                planet = {
+                    name: "Sun",
+                    info: "The Sun is the star at the center of the Solar System.",
+                    diameter: "1,391,000 km",
+                    orbitalPeriod: "N/A",
+                    funFact: "The Sun accounts for about 99.86% of the total mass of the Solar System."
+                };
+            } else {
+                planet = planets[index];
+            }
             infoBox.innerHTML = `
                 <strong>${planet.name}</strong><br>
                 ${planet.info}<br>
@@ -228,7 +241,7 @@
                 mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
             }
             raycaster.setFromCamera(mouse, camera);
-            const intersects = raycaster.intersectObjects(planetMeshes);
+            const intersects = raycaster.intersectObjects([...planetMeshes, sun]); // Include the Sun in the raycast
             if (intersects.length > 0) {
                 const index = intersects[0].object.userData.index;
                 showInfo(index, intersects[0].point);
@@ -249,7 +262,7 @@
                 color: 0x888888,
                 side: THREE.DoubleSide,
                 transparent: true,
-                opacity: 0.15 // more transparent
+                opacity: 0.5 // more transparent
             });
             const orbit = new THREE.Mesh(orbitGeometry, orbitMaterial);
             orbit.rotation.x = Math.PI / 2;
